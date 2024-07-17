@@ -6,7 +6,7 @@ int currentAngle = 0;
 int targetAngle = 0;
 const int MAX_ANGLE = 178;
 const int MIN_ANGLE = 2;
-
+const int step_min = 2;
 
 void setServoAbs(Servo * servo, int angle)
 {
