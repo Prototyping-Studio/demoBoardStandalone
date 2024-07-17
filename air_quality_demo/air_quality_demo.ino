@@ -1,6 +1,12 @@
 #include <Wire.h>
 #include "Adafruit_SGP30.h"
 
+uint16_t TVOC;
+uint16_t eC02;
+uint16_t rawH2;
+uint16_t rawEthanol;
+uint16_t TVOC_base, eCO2_base;
+
 Adafruit_SGP30 sgp;
 
 /* return absolute humidity [mg/m^3] with approximation formula
@@ -17,13 +23,13 @@ uint32_t getAbsoluteHumidity(float temperature, float humidity) {
 void setup() {
   Serial.begin(115200);
   while (!Serial) { delay(10); } // Wait for serial console to open!
-
   Serial.println("SGP30 test");
 
-  if (! sgp.begin()){
+  if (!sgp.begin()){
     Serial.println("Sensor not found :(");
     while (1);
   }
+
   Serial.print("Found SGP30 serial #");
   Serial.print(sgp.serialnumber[0], HEX);
   Serial.print(sgp.serialnumber[1], HEX);
@@ -44,6 +50,7 @@ void loop() {
     Serial.println("Measurement failed");
     return;
   }
+
   Serial.print("TVOC "); Serial.print(sgp.TVOC); Serial.print(" ppb\t");
   Serial.print("eCO2 "); Serial.print(sgp.eCO2); Serial.println(" ppm");
 
@@ -53,20 +60,21 @@ void loop() {
   }
   Serial.print("Raw H2 "); Serial.print(sgp.rawH2); Serial.print(" \t");
   Serial.print("Raw Ethanol "); Serial.print(sgp.rawEthanol); Serial.println("");
- 
+  
+
   delay(1000);
 
   counter++;
   if (counter == 30) {
     counter = 0;
 
-    uint16_t TVOC_base, eCO2_base;
     if (! sgp.getIAQBaseline(&eCO2_base, &TVOC_base)) {
       Serial.println("Failed to get baseline readings");
       return;
     }
     Serial.print("****Baseline values: eCO2: 0x"); Serial.print(eCO2_base, HEX);
     Serial.print(" & TVOC: 0x"); Serial.println(TVOC_base, HEX);
+    
   }
 }
 
