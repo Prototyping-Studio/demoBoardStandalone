@@ -1,11 +1,13 @@
 #include <Wire.h>
 #include "Adafruit_SGP30.h"
+#include "busyboard.h"
 
-uint16_t TVOC;
-uint16_t eC02;
-uint16_t rawH2;
-uint16_t rawEthanol;
-uint16_t TVOC_base, eCO2_base;
+publishedVar<int> TVOC(0,"tvoc");
+publishedVar<int> eCO2(0,"eco2");
+publishedVar<int> rawH2(0,"raw_h2");
+publishedVar<int> rawEthanol(0,"raw_ethanol");
+publishedVar<int> TVOC_base(0,"tvoc_base");
+publishedVar<int> eCO2_base(0,"eco2_base");
 
 Adafruit_SGP30 sgp;
 
@@ -20,10 +22,24 @@ uint32_t getAbsoluteHumidity(float temperature, float humidity) {
     return absoluteHumidityScaled;
 }
 
+void commSetup()
+{
+  Serial.print("${SERIAL");
+  Serial.print(TVOC.getIdString());
+  Serial.print(eCO2.getIdString());
+  Serial.print(rawH2.getIdString());
+  Serial.print(rawEthanol.getIdString());
+  Serial.print(TVOC_base.getIdString());
+  Serial.print(eCO2_base.getIdString());
+  
+  Serial.println("}");  
+}
+
 void setup() {
-  Serial.begin(115200);
+  
+  Serial.begin(57600);
   while (!Serial) { delay(10); } // Wait for serial console to open!
-  Serial.println("SGP30 test");
+  commSetup();
 
   if (!sgp.begin()){
     Serial.println("Sensor not found :(");
@@ -34,7 +50,7 @@ void setup() {
   Serial.print(sgp.serialnumber[0], HEX);
   Serial.print(sgp.serialnumber[1], HEX);
   Serial.println(sgp.serialnumber[2], HEX);
-
+  
   // If you have a baseline measurement from before you can assign it to start, to 'self-calibrate'
   //sgp.setIAQBaseline(0x8E68, 0x8F41);  // Will vary for each sensor!
 }
@@ -46,35 +62,28 @@ void loop() {
   //float humidity = 45.2; // [%RH]
   //sgp.setHumidity(getAbsoluteHumidity(temperature, humidity));
 
-  if (! sgp.IAQmeasure()) {
-    Serial.println("Measurement failed");
-    return;
+  if (sgp.IAQmeasure())
+  {
+    TVOC = sgp.TVOC;
+    eCO2 = sgp.eCO2;
   }
-
-  Serial.print("TVOC "); Serial.print(sgp.TVOC); Serial.print(" ppb\t");
-  Serial.print("eCO2 "); Serial.print(sgp.eCO2); Serial.println(" ppm");
-
-  if (! sgp.IAQmeasureRaw()) {
-    Serial.println("Raw Measurement failed");
-    return;
+  if (sgp.IAQmeasureRaw())
+  {
+    rawH2 = sgp.rawH2;
+    rawEthanol = sgp.rawEthanol;
   }
-  Serial.print("Raw H2 "); Serial.print(sgp.rawH2); Serial.print(" \t");
-  Serial.print("Raw Ethanol "); Serial.print(sgp.rawEthanol); Serial.println("");
-  
 
   delay(1000);
 
   counter++;
   if (counter == 30) {
+    Serial.println("Getting baseline values...");
     counter = 0;
-
-    if (! sgp.getIAQBaseline(&eCO2_base, &TVOC_base)) {
-      Serial.println("Failed to get baseline readings");
-      return;
+    uint16_t eCO2_base_tmp, TVOC_base_tmp;
+    if (sgp.getIAQBaseline(&eCO2_base_tmp, &TVOC_base_tmp)) {
+      eCO2_base = eCO2_base_tmp;
+      TVOC_base = TVOC_base_tmp;
     }
-    Serial.print("****Baseline values: eCO2: 0x"); Serial.print(eCO2_base, HEX);
-    Serial.print(" & TVOC: 0x"); Serial.println(TVOC_base, HEX);
-    
   }
 }
 

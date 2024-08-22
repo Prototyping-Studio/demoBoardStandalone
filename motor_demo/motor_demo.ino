@@ -1,3 +1,9 @@
+#define USE_ROS
+
+#ifdef USE_ROS
+#include <busyboard.h>
+#endif
+
 #include <Adafruit_MotorShield.h>
 
 const int max_speed = 255;
@@ -24,8 +30,21 @@ void setMotor(Adafruit_DCMotor *motor, int speed, bool dir)
     motor->run(BACKWARD);
 }
 
+#ifdef USE_ROS
+void motor_cb(const std_msgs::Int16& speed)
+{
+  int set_speed = abs(speed.data);
+  bool direction = speed.data >= 0;
+  setMotor(motor,set_speed,direction);
+}
+ros::Subscriber<std_msgs::Int16> motorSub("motor",motor_cb);
+#endif
 
 void setup() {
+  #ifdef USE_ROS
+  setupROS();
+  nh.subscribe(motorSub);
+  #endif
 
   if (!AFMS.begin()) 
   {
@@ -35,6 +54,9 @@ void setup() {
 }
 
 void loop() {
+  #ifdef USE_ROS
+  #else
   setMotor(motor,100,true);
+  #endif
   delay(100);
 }
